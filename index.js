@@ -2,6 +2,10 @@ const express = require('express')
 const app = express()
 const morgan = require('morgan')
 const cors = require('cors')
+const mongoose = require('mongoose')
+require('dotenv').config()
+
+const Phone = require('./models/phone')
 
 app.use(cors())
 app.use(express.json())
@@ -23,56 +27,32 @@ const customMorgan = (tokens, req, res) => {
 }
 app.use(morgan(customMorgan))
 
-let persons = [
-    { 
-      "id": 1,
-      "name": "Arto Hellas", 
-      "number": "040-123456"
-    },
-    { 
-      "id": 2,
-      "name": "Ada Lovelace", 
-      "number": "39-44-5323523"
-    },
-    { 
-      "id": 3,
-      "name": "Dan Abramov", 
-      "number": "12-43-234345"
-    },
-    { 
-      "id": 4,
-      "name": "Mary Poppendieck", 
-      "number": "39-23-6423122"
-    }
-]
-
-app.get('/api/persons', (request, response) => {
-    response.json(persons)
+app.get('/api/persons', async (request, response) => {
+    let phones = await Phone.find({});
+    response.json(phones)
 })
 
-app.get('/api/persons/:id', (request, response) => {
-    const id = Number(request.params.id)
-    const person = persons.find(entry => entry.id === id)
-    if(!person){
+app.get('/api/persons/:id', async (request, response) => {
+    let phone =  await Phone.findById(request.params.id);
+    if(!phone){
         response.status(404).end()
     }
-    response.json(person)
+    response.json(phone)
 })
 
-app.delete('/api/persons/:id', (request, response) => {
-    const id = Number(request.params.id)
-    persons = persons.filter(entry => entry.id !== id)
+app.delete('/api/persons/:id', async (request, response) => {
+    await Phone.deleteOne({_id: request.params.id})
     response.status(204).end()
 })
 
-app.post('/api/persons', (request, response) => {
+app.post('/api/persons', async (request, response) => {
     const body = request.body;
     let errorMessages = []
     if(!body.name) {
         errorMessages.push('name is missing')
     } else {
-        let personExist = persons.find(person => person.name === body.name)
-        if(personExist){
+        let personExist = await Phone.find({name: body.name})
+        if(personExist.length > 0){
             errorMessages.push('name must be unique')
         }
     }
@@ -88,23 +68,30 @@ app.post('/api/persons', (request, response) => {
         return;
     }
 
-    let id = 0;
-    let personExist;
-    do {
-        id = Math.floor(Math.random() * 10000) + 1
-        personExist = persons.find(person => person.id === id)
-    } while(personExist)
-
-    const newPerson = {
-        ...body,
-        id: id
-    }
-
-    persons = persons.concat(newPerson)
-    response.json(newPerson).end()
+    let phone = new Phone({
+        name: body.name,
+        number: body.number
+    })
+  
+    phone = await phone.save()
+    response.json(phone).end()
 })
 
+app.put('/api/persons/:id', async (request, response) => {
+    const body = request.body
 
+    let phone = {
+      name: body.name,
+      number: body.number,
+    }
+    
+    phone =  await Phone.findOneAndUpdate(request.params.id, phone, { new: true });
+
+    if(!phone){
+        response.status(404).end()
+    }
+    response.json(phone)
+})
 
 app.get('/info', (request, response) => {
     response.send(`
@@ -114,6 +101,14 @@ app.get('/info', (request, response) => {
 })
 
 app.use(express.static('build'))
+
+const unknownEndpoint = (request, response) => {
+    response.status(404).send({ error: 'unknown endpoint' })
+}
+  
+  // handler of requests with unknown endpoint
+app.use(unknownEndpoint)
+
 
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
