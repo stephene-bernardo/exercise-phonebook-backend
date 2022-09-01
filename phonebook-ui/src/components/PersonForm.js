@@ -21,6 +21,8 @@ const PersonForm = ({persons, setPersons, reloadList, setNotification}) => {
             personService.update(nameAlreadyExist[0].id, {number: newNumber, name: newName}).then(() => {
               reloadList();
               setNotification(`Updated ${newName}`)
+            }).catch(error => {
+              setNotification(error.response.data.error)
             })
           }
         }
@@ -28,6 +30,8 @@ const PersonForm = ({persons, setPersons, reloadList, setNotification}) => {
           personService.create({name: newName, number: newNumber}).then(() => {
             reloadList();
             setNotification(`Added ${newName}`)
+          }).catch(error => {
+            setNotification(error.response.data.error)
           })
           // setPersons(persons.concat({name: newName, id: persons.length + 1, number: newNumber}))
         }

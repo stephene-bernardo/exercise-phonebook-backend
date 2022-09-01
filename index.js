@@ -45,52 +45,58 @@ app.delete('/api/persons/:id', async (request, response) => {
     response.status(204).end()
 })
 
-app.post('/api/persons', async (request, response) => {
+app.post('/api/persons', async (request, response, next) => {
     const body = request.body;
     let errorMessages = []
-    if(!body.name) {
-        errorMessages.push('name is missing')
-    } else {
-        let personExist = await Phone.find({name: body.name})
-        if(personExist.length > 0){
-            errorMessages.push('name must be unique')
-        }
-    }
+    let personExist = await Phone.find({name: body.name})
+    // if(personExist.length > 0){
+    //     errorMessages.push('name must be unique')
+    // }
 
-    if(!body.number) {
-        errorMessages.push('number is missing')
-    }
+    // if(0 < errorMessages.length) {
+    //     response.json({
+    //         error: errorMessages.join(', ')
+    //     }).end()
+    //     return;
+    // }
 
-    if(0 < errorMessages.length) {
-        response.json({
-            error: errorMessages.join(', ')
-        }).end()
-        return;
+    try {
+        let phone = new Phone({
+            name: body.name,
+            number: body.number
+        })
+      
+        phone = await phone.save()
+        response.json(phone).end()
     }
-
-    let phone = new Phone({
-        name: body.name,
-        number: body.number
-    })
-  
-    phone = await phone.save()
-    response.json(phone).end()
+    catch(error) {
+        next(error);
+    }
 })
 
-app.put('/api/persons/:id', async (request, response) => {
+app.put('/api/persons/:id', async (request, response, next) => {
     const body = request.body
 
     let phone = {
       name: body.name,
       number: body.number,
     }
+    try{
+        phone =  await Phone.findOneAndUpdate(
+            request.params.id, 
+            phone, 
+            { new: true, runValidators: true, context: 'query'  }
+        );
     
-    phone =  await Phone.findOneAndUpdate(request.params.id, phone, { new: true });
-
-    if(!phone){
-        response.status(404).end()
+        if(!phone){
+            response.status(404).end()
+        }
+        response.json(phone)
+    } 
+    catch(error){
+        next(error)
     }
-    response.json(phone)
+
 })
 
 app.get('/info', (request, response) => {
@@ -101,6 +107,18 @@ app.get('/info', (request, response) => {
 })
 
 app.use(express.static('build'))
+
+const errorHandler = (error, request, response, next) => {
+    console.error(error.name, '  ', error.message)
+  
+    if (error.name === 'ValidationError') {
+      return response.status(400).json({ error: error.message })
+    }
+  
+    next(error)
+}
+
+app.use(errorHandler)
 
 const unknownEndpoint = (request, response) => {
     response.status(404).send({ error: 'unknown endpoint' })
