@@ -20,6 +20,7 @@ const update = (id, newObject) => {
     return axios.put(`${baseUrl}/${id}`, newObject)
 }
 
+/* eslint import/no-anonymous-default-export: [2, {"allowObject": true}] */
 export default {
     getAll,
     create,

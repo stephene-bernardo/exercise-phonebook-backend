@@ -15,7 +15,7 @@ const phonebookScheme = new mongoose.Schema({
 });
 
 (async function() {
-  let abc = await mongoose.connect(url)
+  await mongoose.connect(url)
   const Phone = mongoose.model('Phonebook', phonebookScheme)
   if(process.argv[3] && process.argv[4]){
     let phone = new Phone({
@@ -27,12 +27,12 @@ const phonebookScheme = new mongoose.Schema({
     console.log(`added ${phone.name} number ${phone.number} to phonebook`)
   } else {
     console.log('phonebook:')
-    let phones = await Phone.find({});
+    let phones = await Phone.find({})
     phones.forEach(phone => {
       console.log(`${phone.name} ${phone.number}`)
     })
   }
   mongoose.connection.close()
-})();
+})()
 
 
